@@ -5,6 +5,14 @@ import type { ResolvedConfig } from '../config'
 import { escapeRegex, getNpmPackageName, slash } from '../utils'
 import { resolvePackageData } from '../packages'
 
+// 专门处理依赖解析逻辑。
+// 扫描时遇到 import xxx，需要判断 xxx 是什么：
+// 是本地文件？
+// 是 node_modules 里的库？
+// 还是某种特殊别名？
+// 负责补全依赖的正确路径，比如加 .js、或者找到 node_modules/xxx/index.js。
+// 简单说：帮扫描器搞清楚每一个 import 到底指向哪里。
+
 export function createOptimizeDepsIncludeResolver(
   config: ResolvedConfig,
   ssr: boolean,

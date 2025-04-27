@@ -38,6 +38,12 @@ import type { PluginContainer } from '../server/pluginContainer'
 import { createPluginContainer } from '../server/pluginContainer'
 import { transformGlobImport } from '../plugins/importMetaGlob'
 
+// 扫描阶段的核心。
+// 主要是用 esbuild 做一次快速的 AST 解析（不真的打包，只是扫描 import 语句）。
+// 找出你的项目里所有要预构建的第三方依赖。
+// 输出一份 扫描报告，告诉 optimizer.ts 要优化哪些模块。
+// 简单说：负责找出需要被预构建的所有依赖清单。
+
 type ResolveIdOptions = Parameters<PluginContainer['resolveId']>[2]
 
 const debug = createDebugger('vite:deps')

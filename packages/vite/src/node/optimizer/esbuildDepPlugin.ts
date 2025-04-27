@@ -14,6 +14,11 @@ import {
 import { browserExternalId, optionalPeerDepId } from '../plugins/resolve'
 import { isCSSRequest, isModuleCSSRequest } from '../plugins/css'
 
+// 定义一个 esbuild 插件，用于辅助预构建依赖时处理各种细节。
+// 这个插件是给 esbuild（作为打包器）用的。
+// 功能比如：如何处理 external 的依赖？需要转译哪些模块？要不要替换路径？要不要注入一些小的 polyfill？
+// 简单说：辅助 esbuild 在优化依赖时能正确处理各种边界情况。
+
 const externalWithConversionNamespace =
   'vite:dep-pre-bundle:external-conversion'
 const convertedExternalPrefix = 'vite-dep-pre-bundle-external:'

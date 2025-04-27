@@ -35,6 +35,13 @@ export {
   getDepsOptimizer,
 } from './optimizer'
 
+// 总入口文件，对外暴露 optimizer 的主要功能。
+// 把 scan.ts, optimizer.ts, resolve.ts 里面实现的逻辑组织起来。
+// 暴露给 Vite 核心代码调用，比如：
+// scanImports()（扫描入口）
+// optimizeDeps()（开始做依赖预构建）
+// 相当于 optimizer 子系统的 index.js，对外统一接口。
+
 const debug = createDebugger('vite:deps')
 
 const jsExtensionRE = /\.js$/i

@@ -26,6 +26,15 @@ import type {
   OptimizedDepInfo,
 } from '.'
 
+// 执行优化（预构建）阶段的主流程控制器。
+// 真正调用 esbuild 去打包依赖。
+// 会根据扫描结果，生成优化的产物，存到 .vite/deps/。
+// 主要负责：
+// 配置好 esbuild
+// 调用 esbuild 开始构建
+// 生成优化记录，比如哪些文件已经优化过了
+// 简单说：指挥 esbuild 把扫描到的依赖打包成 Vite 能直接用的小模块。
+
 const debug = createDebugger('vite:deps')
 
 /**
