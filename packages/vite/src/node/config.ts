@@ -574,6 +574,7 @@ export async function resolveConfig(
 
   // resolve cache directory
   const pkgDir = findNearestPackageData(resolvedRoot, packageCache)?.dir
+  // 缓存目录，一种情况是在 node_modules/.vite
   const cacheDir = normalizePath(
     config.cacheDir
       ? path.resolve(resolvedRoot, config.cacheDir)

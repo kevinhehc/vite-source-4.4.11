@@ -1125,6 +1125,11 @@ export async function extractExportsData(
     // For custom supported extensions, build the entry file to transform it into JS,
     // and then parse with es-module-lexer. Note that the `bundle` option is not `true`,
     // so only the entry file is being transformed.
+
+    // 对于自定义支持的扩展名，会先构建入口文件，将其转译成 JavaScript，
+    // 然后再用 es-module-lexer 进行解析。
+    // 注意，这里并没有开启 bundle 选项，
+    // 所以只转译入口文件本身，不会处理它的依赖。
     const result = await build({
       ...esbuildOptions,
       entryPoints: [filePath],
