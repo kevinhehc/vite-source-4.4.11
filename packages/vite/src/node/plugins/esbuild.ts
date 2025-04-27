@@ -354,6 +354,9 @@ export const buildEsbuildPlugin = (config: ResolvedConfig): Plugin => {
   }
 }
 
+// 根据当前构建配置（config）和模块输出格式（format，比如 es, cjs, umd 等），
+// 返回一套供 esbuild 使用的转译（transpile）参数。
+// 如果条件不满足（比如无需转译），就直接返回 null。
 export function resolveEsbuildTranspileOptions(
   config: ResolvedConfig,
   format: InternalModuleFormat,
@@ -362,15 +365,28 @@ export function resolveEsbuildTranspileOptions(
   const minify = config.build.minify === 'esbuild'
 
   if ((!target || target === 'esnext') && !minify) {
+    // 如果：
+    // 没有指定 target，或者指定的是 esnext（就是非常新的浏览器支持标准）
+    // 且没有用 esbuild 来做压缩（minify）
+    // 那么：不需要 esbuild 转译处理，直接返回 null，省时间！
     return null
   }
 
   // Do not minify whitespace for ES lib output since that would remove
   // pure annotations and break tree-shaking
   // https://github.com/vuejs/core/issues/2860#issuecomment-926882793
+  // 如果是在做 库模式（library）打包，且输出格式是 es（ES Module）的话，需要特别小心处理。
+  // 主要是因为：压缩空白（minify whitespace）可能破坏 tree-shaking，导致未使用的代码无法被正确优化掉。
+  // 这里会单独控制空白压缩。
   const isEsLibBuild = config.build.lib && format === 'es'
   const esbuildOptions = config.esbuild || {}
 
+  // 这里构建了初步的 options：
+  // 字符编码 utf8
+  // 合并用户配置的 esbuild 选项
+  // 设置转译目标 target
+  // 指定输出模块格式（用 rollupToEsbuildFormatMap 转成 esbuild 支持的格式）
+  // 明确告诉 esbuild 支持 dynamic-import 和 import-meta（这些特性不能被破坏，重要）
   const options: TransformOptions = {
     charset: 'utf8',
     ...esbuildOptions,
@@ -387,6 +403,7 @@ export function resolveEsbuildTranspileOptions(
   }
 
   // If no minify, disable all minify options
+  // 不需要压缩 ➔ 禁用所有压缩、禁用 tree-shaking
   if (!minify) {
     return {
       ...options,
@@ -399,6 +416,7 @@ export function resolveEsbuildTranspileOptions(
   }
 
   // If user enable fine-grain minify options, minify with their options instead
+  // 用户自己配置了精细化压缩选项（部分 minify）
   if (
     options.minifyIdentifiers != null ||
     options.minifySyntax != null ||
@@ -406,6 +424,7 @@ export function resolveEsbuildTranspileOptions(
   ) {
     if (isEsLibBuild) {
       // Disable minify whitespace as it breaks tree-shaking
+      // // 禁止 minifyWhitespace，防止破坏 tree-shaking
       return {
         ...options,
         minify: false,
@@ -415,6 +434,7 @@ export function resolveEsbuildTranspileOptions(
         treeShaking: true,
       }
     } else {
+      // 正常使用用户的配置
       return {
         ...options,
         minify: false,
@@ -427,8 +447,10 @@ export function resolveEsbuildTranspileOptions(
   }
 
   // Else apply default minify options
+  // 默认压缩选项（如果前面都没处理到）
   if (isEsLibBuild) {
     // Minify all except whitespace as it breaks tree-shaking
+    // 开启标识符压缩（minifyIdentifiers）、语法压缩（minifySyntax），但禁用空白压缩（minifyWhitespace: false）。
     return {
       ...options,
       minify: false,
@@ -438,6 +460,7 @@ export function resolveEsbuildTranspileOptions(
       treeShaking: true,
     }
   } else {
+    // 直接开启整体 minify: true，并且开启 treeShaking。
     return {
       ...options,
       minify: true,
