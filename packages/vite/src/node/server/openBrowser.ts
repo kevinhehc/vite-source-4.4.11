@@ -17,6 +17,12 @@ import colors from 'picocolors'
 import type { Logger } from '../logger'
 import { VITE_PACKAGE_DIR } from '../constants'
 
+// 在开发服务器启动后，自动打开浏览器并访问指定 URL。
+// （可以根据用户环境变量配置是用哪个浏览器、脚本，或者不打开）
+//
+// 而且，它特别针对 macOS 做了优化：
+// 如果是 Chrome 系的浏览器，还会尝试复用已有的标签页，而不是每次都新开一个标签页。
+
 /**
  * Reads the BROWSER environment variable and decides what to do with it.
  */

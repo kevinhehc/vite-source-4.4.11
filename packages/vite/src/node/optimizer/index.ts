@@ -224,11 +224,25 @@ export interface DepOptimizationMetadata {
  * Scan and optimize dependencies within a project.
  * Used by Vite CLI when running `vite optimize`.
  */
+// 扫描你的项目入口（比如 index.html、src/main.ts）
+// 收集所有被引用到的 node_modules 依赖
+// 用 esbuild 把这些依赖打包成 ESM 单文件版本
+// 缓存到 .vite/ 文件夹里
+// 下次 dev server 启动直接用缓存，加速启动！
 export async function optimizeDeps(
   config: ResolvedConfig,
   force = config.optimizeDeps.force,
   asCommand = false,
 ): Promise<DepOptimizationMetadata> {
+  // 为什么有时候要手动运行 vite optimize？
+  // 正常情况下 vite dev 会自己触发 optimize。
+
+  // 但是：
+  // 如果你想预先缓存依赖（比如大型 monorepo 项目）
+  // 如果你的环境中需要 CI/CD 中提前预处理
+  // 如果想测试依赖优化是否正确
+  // 如果遇到缓存 bug 或版本不一致问题，需要重新 optimize
+  // 就可以手动执行 vite optimize。
   const log = asCommand ? config.logger.info : debug
 
   const ssr = config.command === 'build' && !!config.build.ssr

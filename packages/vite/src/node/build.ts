@@ -724,6 +724,7 @@ export async function build(
 
     // write or generate files with rollup
     const { rollup } = await import('rollup')
+    // rollup.rollup
     bundle = await rollup(rollupOptions)
 
     if (options.write) {

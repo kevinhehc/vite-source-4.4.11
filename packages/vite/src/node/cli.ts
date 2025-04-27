@@ -1,6 +1,8 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import { performance } from 'node:perf_hooks'
+// cac 是一个 非常小巧、快速的命令行工具库，
+// 专门用来**帮你快速构建命令行应用（CLI 工具）**的。
 import { cac } from 'cac'
 import colors from 'picocolors'
 import type { BuildOptions } from './build'
@@ -299,6 +301,10 @@ cli
     '--force',
     `[boolean] force the optimizer to ignore the cache and re-bundle`,
   )
+  // 在 Vite 开发模式 (vite dev) 下，默认是即时按需加载模块，
+  // 但 node_modules 里的很多包（尤其是老式 CJS 格式包）加载时性能不好。
+  // 所以 vite 会提前用 esbuild 把这些依赖 打包成 ESM 格式，存到 .vite/ 缓存里。
+  // 这样后续页面请求时，可以直接快速加载已经优化好的模块，不需要慢慢解析原生 node_modules 里的复杂依赖树。
   .action(
     async (root: string, options: { force?: boolean } & GlobalCLIOptions) => {
       filterDuplicateOptions(options)
@@ -349,6 +355,7 @@ cli
       filterDuplicateOptions(options)
       const { preview } = await import('./preview')
       try {
+        // preview
         const server = await preview({
           root,
           base: options.base,
