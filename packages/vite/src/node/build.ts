@@ -304,6 +304,13 @@ export interface ResolvedBuildOptions
   modulePreload: false | ResolvedModulePreloadOptions
 }
 
+// 处理 build 部分用户配置，补齐默认值，做一些兼容性处理，最后返回标准化后的 ResolvedBuildOptions。
+// 关键步骤：
+// 检查 polyfillModulePreload 旧选项，发出警告并自动迁移。
+// 设置 modulePreload 的默认值。
+// 生成一份默认的 build 配置。
+// 如果用户有自定义 build 配置，用 mergeConfig 合并到默认值里。
+// 修正一些特殊字段（比如 target、minify、cssMinify）。
 export function resolveBuildOptions(
   raw: BuildOptions | undefined,
   logger: Logger,
@@ -424,6 +431,18 @@ export function resolveBuildOptions(
   return resolved
 }
 
+// 根据 ResolvedConfig 返回构建阶段需要用到的插件列表。
+// 分两类插件：
+// pre：在 Rollup 核心处理前执行，例如：
+// commonjsPlugin
+// dataURIPlugin
+// 用户自定义的 rollupOptions.plugins
+// post：在主构建逻辑后处理，例如：
+// buildImportAnalysisPlugin
+// buildEsbuildPlugin
+// terserPlugin
+// manifestPlugin
+// （这些插件是在 Rollup 内部的 plugin system 运行的。）
 export async function resolveBuildPlugins(config: ResolvedConfig): Promise<{
   pre: Plugin[]
   post: Plugin[]
@@ -469,6 +488,26 @@ export async function resolveBuildPlugins(config: ResolvedConfig): Promise<{
  * Bundles the app for production.
  * Returns a Promise containing the build result.
  */
+
+// 入口函数，执行实际的打包工作。
+// 流程很完整，步骤是：
+// 1、解析配置 resolveConfig
+// 2、打印构建信息（比如：vite v4.x building for production）
+// 3、根据模式确定入口文件 input
+//    如果是 library build，入口是 lib.entry
+//    如果是 SSR，不能是 HTML 文件
+// 4、准备 Rollup 插件列表
+//    如果是 SSR，注入 ssr 标志到插件钩子
+// 5、处理 external 配置
+//    SSR 的时候可能需要额外处理 CJS 模块 external
+// 6、初始化依赖优化（optimizer）
+// 7、组装 Rollup 配置
+// 8、如果 watch 模式
+//    调用 rollup.watch，开始监听文件变化
+// 9、否则正式执行 rollup.build
+//    先清空输出目录 prepareOutDir
+//    调用 bundle.write 写入输出文件
+// 10、处理 build 失败的错误输出
 export async function build(
   inlineConfig: InlineConfig = {},
 ): Promise<RollupOutput | RollupOutput[] | RollupWatcher> {
@@ -704,6 +743,12 @@ export async function build(
   }
 }
 
+// 作用：
+// 清理输出目录、复制 public 目录。
+// 主要逻辑：
+// 如果 outDir 在 root 外，默认不会自动清空（安全保护）。
+// 避免清除 .git 文件夹。
+// 如果 copyPublicDir 开启，把 public 目录复制到 outDir 中。
 function prepareOutDir(
   outDirs: string[],
   emptyOutDir: boolean | null,
@@ -789,6 +834,12 @@ function resolveOutputJsExtension(
   }
 }
 
+// 在 library 模式下确定输出文件名。
+// 比如，my-lib.es.js 或 my-lib.cjs.js。
+// 逻辑：
+// 如果用户配置了 fileName，优先用
+// 否则用 package.json 的 name
+// 根据输出 format 和 package.json 的 type 决定扩展名 .js/.cjs/.mjs
 export function resolveLibFilename(
   libOptions: LibraryOptions,
   format: ModuleFormat,
@@ -822,6 +873,9 @@ export function resolveLibFilename(
   return `${name}.${format}.${extension}`
 }
 
+// 处理 library build 的输出格式，比如 es, cjs, umd, iife。
+// 如果 formats 包含 umd/iife，必须只有一个入口，并且必须设置 name
+// 如果用户手动指定了 rollupOptions.output，则忽略 build.lib.formats
 export function resolveBuildOutputs(
   outputs: OutputOptions | OutputOptions[] | undefined,
   libOptions: LibraryOptions | false,
@@ -880,6 +934,12 @@ const dynamicImportWarningIgnoreList = [
   `statically analyzed`,
 ]
 
+// 统一处理 Rollup 抛出的警告。
+// 特点：
+// 某些 warning 直接忽略（比如循环依赖、this为undefined）
+// 特别处理动态导入变量的 warning
+// UNRESOLVED_IMPORT 直接抛错（防止未正确引入依赖）
+// 其他正常打印 warning。
 export function onRollupWarning(
   warning: RollupWarning,
   warn: LoggingFunction,
@@ -949,6 +1009,8 @@ export function onRollupWarning(
   }
 }
 
+// 在 SSR CJS 模式下，基于依赖扫描结果确定哪些模块应该 external。
+// 比如你不希望把 express 打包进 SSR bundle，而是外部 require('express')。
 async function cjsSsrResolveExternal(
   config: ResolvedConfig,
   user: ExternalOption | undefined,
