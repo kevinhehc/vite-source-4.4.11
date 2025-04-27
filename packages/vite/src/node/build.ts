@@ -148,6 +148,7 @@ export interface BuildOptions {
    * Available options are 'terser' or 'esbuild'.
    * @default 'esbuild'
    */
+  // build 阶段也用了 esbuild 做 minify
   minify?: boolean | 'terser' | 'esbuild'
   /**
    * Options for terser
