@@ -21,6 +21,7 @@ const importMetaUrl = new URL(import.meta.url)
 
 // use server configuration, then fallback to inference
 const serverHost = __SERVER_HOST__
+// 协议
 const socketProtocol =
   __HMR_PROTOCOL__ || (importMetaUrl.protocol === 'https:' ? 'wss' : 'ws')
 const hmrPort = __HMR_PORT__

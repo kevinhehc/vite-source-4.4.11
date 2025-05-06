@@ -148,22 +148,30 @@ kbd {
 </div>
 `
 
+// 匹配文件路径+行列号
 const fileRE = /(?:[a-zA-Z]:\\|\/).*?:\d+:\d+/g
+// 匹配错误的 代码帧（code frame）：
 const codeframeRE = /^(?:>?\s+\d+\s+\|.*|\s+\|\s*\^.*)\r?\n/gm
 
 // Allow `ErrorOverlay` to extend `HTMLElement` even in environments where
 // `HTMLElement` was not originally defined.
+// 为了兼容某些环境下 HTMLElement 不存在的情况，使用了 默认类（Fallback class）防止报错。
 const { HTMLElement = class {} as typeof globalThis.HTMLElement } = globalThis
+// 这表示创建了一个自定义的 HTML 元素 <vite-error-overlay>，用于显示错误弹窗。
 export class ErrorOverlay extends HTMLElement {
   root: ShadowRoot
   closeOnEsc: (e: KeyboardEvent) => void
 
   constructor(err: ErrorPayload['err'], links = true) {
     super()
+    // 错误提示内容被封装在 Shadow DOM 中，不影响外部样式。
     this.root = this.attachShadow({ mode: 'open' })
     this.root.innerHTML = template
 
     codeframeRE.lastIndex = 0
+    // err.frame 是 Vite 插件或编译器生成的代码帧字符串；
+    // 如果有代码帧，就将 message 中的那部分剥离出来，单独展示。
+    // 然后调用 this.text(selector, text, linkFiles) 方法设置各个部分的内容。
     const hasFrame = err.frame && codeframeRE.test(err.frame)
     const message = hasFrame
       ? err.message.replace(codeframeRE, '')
@@ -193,6 +201,8 @@ export class ErrorOverlay extends HTMLElement {
       this.close()
     })
 
+    // 点击整个弹窗会关闭（除 .window 内部点击不触发关闭）。
+    // 支持键盘 Esc 关闭。
     this.closeOnEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || e.code === 'Escape') {
         this.close()
@@ -218,6 +228,7 @@ export class ErrorOverlay extends HTMLElement {
           const link = document.createElement('a')
           link.textContent = file
           link.className = 'file-link'
+          // 如果启用了 linkFiles，路径会变成可点击的链接，通过请求后端接口自动打开本地编辑器中的对应文件。
           link.onclick = () => {
             fetch(`${base}__open-in-editor?file=` + encodeURIComponent(file))
           }
@@ -233,6 +244,7 @@ export class ErrorOverlay extends HTMLElement {
   }
 }
 
+// 如果全局未注册这个组件，则注册 <vite-error-overlay> 元素。
 export const overlayId = 'vite-error-overlay'
 const { customElements } = globalThis // Ensure `customElements` is defined before the next line.
 if (customElements && !customElements.get(overlayId)) {
