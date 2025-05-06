@@ -80,6 +80,10 @@ export interface BuildOptions {
    * https://esbuild.github.io/content-types/#javascript for more details.
    * @default 'modules'
    */
+  // 兼容性转换目标。转换是用esbuild实现的，最低支持的目标是es2015/es6。注意，这只处理语法转换，不涉及polyfills（除了动态导入）。
+  // 默认值：` modules `——类似于@babel/preset-env的targets.esmodules，针对原生支持动态es模块导入的浏览器。https://caniuse.com/es6-module-dynamic-import
+  // 另一个特殊值是` esnext `——它只执行最小的转译（为了简化），并假定支持本地动态导入。
+  // 有关自定义目标的详细信息，请参见https://esbuild.github.io/api/#target和https://esbuild.github.io/content-types/#javascript。
   target?: 'modules' | TransformOptions['target'] | false
   /**
    * whether to inject module preload polyfill.
@@ -87,11 +91,16 @@ export interface BuildOptions {
    * @default true
    * @deprecated use `modulePreload.polyfill` instead
    */
+  // 是否注入模块预加载polyfill。注意：不适用于库模式。
+  // 弃用:
+  // 使用modulePreload。polyfill相反
   polyfillModulePreload?: boolean
   /**
    * Configure module preload
    * Note: does not apply to library mode.
    * @default true
+   * hhc
+   * 控制这个为false
    */
   modulePreload?: boolean | ModulePreloadOptions
   /**
@@ -99,18 +108,22 @@ export interface BuildOptions {
    * directory exists, it will be removed before the build.
    * @default 'dist'
    */
+  // 输出目录
   outDir?: string
   /**
    * Directory relative from `outDir` where the built js/css/image assets will
    * be placed.
    * @default 'assets'
    */
+  // js/css/image等资源的目相对目录，默认是assets
   assetsDir?: string
   /**
    * Static asset files smaller than this number (in bytes) will be inlined as
    * base64 strings. Default limit is `4096` (4kb). Set to `0` to disable.
    * @default 4096
+   * hhc
    */
+  // 小于多少的图片会内联问 string
   assetsInlineLimit?: number
   /**
    * Whether to code-split CSS. When enabled, CSS in async chunks will be
@@ -118,6 +131,7 @@ export interface BuildOptions {
    * style tags when the chunk is loaded.
    * @default true
    */
+  // css代码是否切割为单独的文件
   cssCodeSplit?: boolean
   /**
    * An optional separate target for CSS minification.
@@ -128,12 +142,32 @@ export interface BuildOptions {
    * doesn't support the #RGBA syntax.
    * @default target
    */
+  // 你可以为 CSS 压缩 单独设置一个目标浏览器（target），这在某些情况下是有用的。
+  //
+  // 为什么需要单独设置 CSS 的 target？
+  // 有些浏览器，比如：
+  // Android 微信内置浏览器（WeChat WebView）
+  // 这些浏览器 支持现代 JavaScript 语法，但 不完全支持现代 CSS 特性，比如：
+  // 不支持 #RGBA 颜色格式（如 #ff000088）
+  // 或其他 CSS 新语法（比如新单位、嵌套、媒体查询增强等）
+  // 如果你使用了默认的 target，Vite 可能会输出这些新语法的 CSS，从而导致页面在这些浏览器上出现显示问题。
   cssTarget?: TransformOptions['target'] | false
   /**
    * Override CSS minification specifically instead of defaulting to `build.minify`,
    * so you can configure minification for JS and CSS separately.
    * @default 'esbuild'
    */
+  // 值	              说明
+  // true	            启用 CSS 压缩，使用默认压缩器（等同于 'esbuild'）
+  // 'esbuild'	      使用 esbuild 压缩 CSS（默认）
+  // 'lightningcss'	  使用 lightningcss（更快、兼容性更好）压缩 CSS
+  // false	          禁用 CSS 压缩
+
+  // lightningcss 简介（可选）
+  // 由 Parcel 团队开发，比 esbuild 对 CSS 支持更完整；
+  // 支持自动降级、兼容旧浏览器 CSS 特性；
+  // 支持 CSS nesting、media query ranges、ICU、更多特性；
+  // 更适合复杂或兼容性要求高的项目。
   cssMinify?: boolean | 'esbuild' | 'lightningcss'
   /**
    * If `true`, a separate sourcemap file will be created. If 'inline', the
@@ -142,6 +176,11 @@ export interface BuildOptions {
    * comments in the bundled files are suppressed.
    * @default false
    */
+  // 选项	          说明
+  // false（默认）	  不生成 sourcemap（构建体积最小）
+  // true	          生成独立的 .map 文件，调试工具可自动加载
+  // 'inline'	      sourcemap 以 Base64 data URI 的形式嵌入到生成的 .js 文件中
+  // 'hidden'	      生成 .map 文件，但不会在生成的 .js 文件里插入 //# sourceMappingURL 注释（适合上传 sourcemap 到监控平台但不暴露给用户）
   sourcemap?: boolean | 'inline' | 'hidden'
   /**
    * Set to `false` to disable minification, or specify the minifier to use.
@@ -228,17 +267,20 @@ export interface BuildOptions {
    * @experimental
    * @default false
    */
+  //
   ssrEmitAssets?: boolean
   /**
    * Set to false to disable reporting compressed chunk sizes.
    * Can slightly improve build speed.
    * @default true
    */
+  // 压缩大小汇报，关闭可以轻微的提高构建速度
   reportCompressedSize?: boolean
   /**
    * Adjust chunk size warning limit (in kbs).
    * @default 500
    */
+  // chunk告警阈值，默认500kbs
   chunkSizeWarningLimit?: number
   /**
    * Rollup watch options
@@ -279,11 +321,18 @@ export interface ModulePreloadOptions {
    * Note: does not apply to library mode.
    * @default true
    */
+  // 默认值： true
+  // 作用： 是否自动注入一个 <script> polyfill，用于支持不原生支持 <link rel="modulepreload"> 的旧浏览器（如部分 Safari、早期移动浏览器）。
+  // 说明： 仅对非 library 模式有效。
+  // 设置为 false： 如果你只面向现代浏览器，可以关闭它，减少构建体积。
   polyfill?: boolean
   /**
    * Resolve the list of dependencies to preload for a given dynamic import
    * @experimental
    */
+  // 类型： 函数，参数是一个动态导入的模块，返回其依赖模块列表
+  // 作用： 允许自定义“动态导入模块”对应的预加载依赖列表（比如你希望只预加载部分依赖）
+  // 状态： @experimental —— 实验性 API，不稳定
   resolveDependencies?: ResolveModulePreloadDependenciesFn
 }
 export interface ResolvedModulePreloadOptions {
